@@ -82,6 +82,7 @@ canvas{width:100%!important;height:440px!important;margin:22px auto;display:bloc
   <button id="uploadBtn" disabled>上傳並解析</button><br>
   家長 E-mail <input type="email" id="mailInput" placeholder="parent@example.com">
   <button id="sendBtn" disabled>寄送 PDF</button>
+  <button id="htmlBtn" disabled>下載網頁</button>
   <span id="status" style="margin-left:12px;color:var(--danger);"></span>
 </div>
 <!-- ===== 成績單頁面 ===== -->
@@ -140,6 +141,20 @@ qs('#env').addEventListener('click',()=>{qs('#env').classList.add('open');setTim
 /* === 主程式 === */
 let rows=[],labels=[],y24=[],y25=[],imp=[],isMax=[],chLine,chBar,chRadar,pageNow=0;
 const pages=[...document.querySelectorAll('.page')];
+if(window.preloadedData){
+  ({rows}=window.preloadedData);
+  yearInput.value=window.preloadedData.year||'';
+  stuInput.value=window.preloadedData.student||'';
+  teaInput.value=window.preloadedData.teacher||'';
+  cmtInput.value=window.preloadedData.comment||'';
+  buildTables();buildCharts();buildSummary();
+  pages.forEach((p,i)=>p.style.display=i===0?'block':'none');
+  pageNow=0;prevBtn.disabled=true;nextBtn.disabled=false;
+  pdfBtn.disabled=false;
+  qs('#inputPane')?.remove();
+  qs('#cover').style.display='flex';
+  updateCoverTitle();
+}
 function setPh(){for(let i=0;i<4;i++){qs('#phYear'+i).textContent=yearInput.value||'-';qs('#phStu'+i).textContent=stuInput.value||'-';}updateCoverTitle();}
 fileInput.onchange=e=>uploadBtn.disabled=!e.target.files.length;
 uploadBtn.onclick=()=>{
@@ -152,7 +167,7 @@ uploadBtn.onclick=()=>{
       buildTables();buildCharts();buildSummary();
       pages.forEach((p,i)=>p.style.display=i===0?'block':'none');
       pageNow=0;prevBtn.disabled=true;nextBtn.disabled=false;
-      [pdfBtn,sendBtn].forEach(b=>b.disabled=false);
+      [pdfBtn,sendBtn,htmlBtn].forEach(b=>b.disabled=false);
       status.textContent='✅ 匯入成功！';
       qs('#cover').style.display='flex';
       qs('#inputPane').style.display='none';
@@ -238,6 +253,19 @@ async function makePDF(){
   return pdf;
 }
 pdfBtn.onclick=async()=>makePDF().then(p=>p.save('成績單.pdf'));
+function downloadHTML(){
+  const data={year:yearInput.value,student:stuInput.value,teacher:teaInput.value,comment:cmtInput.value,rows};
+  const clone=document.documentElement.cloneNode(true);
+  clone.querySelector('#inputPane')?.remove();
+  clone.querySelector('head').insertAdjacentHTML('beforeend',`<script>const preloadedData=${JSON.stringify(data)}</script>`);
+  const html='<!DOCTYPE html>'+clone.outerHTML;
+  const blob=new Blob([html],{type:'text/html'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='成績單.html';a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+htmlBtn.onclick=downloadHTML;
 /* === EmailJS === */
 emailjs.init('dWGYCmMHR8fASFj7T');
 const SERV='service_7q3vnkc',TPL='template_pm8wuie';
